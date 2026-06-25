@@ -65,6 +65,11 @@ recreated screens live in `.context/design/` (the "Compass · Neon Terminal" kit
 - Never set `X-Frame-Options`; CSP must allow `frame-ancestors web.telegram.org` (see `next.config.ts`).
 - `env(safe-area-inset-*)` is broken — bind Telegram `safeAreaInset` to CSS vars (`lib/telegram/init.ts`).
 - HMAC-verify `initData` server-side; verify `ton_proof` (Ed25519) before trusting a TON address.
+- "Buy with card" (Halliday fiat on-ramp, tokenized/Ethereum only): the hosted KYC iframe is
+  expected to be blocked in the WebView, so the PRIMARY path opens the Compass-hosted
+  `/onramp/checkout` in the system browser via `openLink`, then reuses `useFunding`'s
+  arrival-poll to auto-deposit the delivered USDC. See
+  `docs/plans/2026-06-23-halliday-onramp-integration/04-telegram-miniapp-buy-with-card.md`.
 
 ## Planning Convention
 

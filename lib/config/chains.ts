@@ -78,6 +78,14 @@ export interface FundingTarget {
   minUsd: number;
   /** Minimum a user may bridge in one transfer, in USD. Omit for no bridge floor. */
   bridgeMinUsd?: number;
+  /**
+   * Whether the "Buy with card" (Halliday fiat on-ramp) funding source is offered
+   * for this target. Card delivers USDC on **Ethereum** only for the hero, so it's
+   * enabled only for `tokenized`. Absent/false elsewhere (perps funds Arbitrum/
+   * Hyperliquid; `tokenized-base` is Base). Lets DepositSheet gate the button
+   * declaratively instead of string-matching `product`.
+   */
+  cardFundingEnabled?: boolean;
   description: string;
 }
 
@@ -110,6 +118,8 @@ export const FUNDING_TARGETS: Record<FundingTargetKey, FundingTarget> = {
     token: USDC.ethereum,
     tokenSymbol: 'USDC',
     minUsd: 25,
+    // Halliday card on-ramp delivers USDC on Ethereum — enabled here only.
+    cardFundingEnabled: true,
     description: 'USDC on Ethereum → tokenized equities & RWA account (≥$25 to trade).',
   },
   'tokenized-base': {

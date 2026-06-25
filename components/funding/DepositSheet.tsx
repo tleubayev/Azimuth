@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { TonConnectButton } from '@tonconnect/ui-react';
-import { ArrowDownToLine, Clock, Receipt, Wallet, Check } from 'lucide-react';
+import { ArrowDownToLine, Clock, Receipt, Wallet, Check, CreditCard } from 'lucide-react';
 import { Sheet, SheetHeader, AmountField, Button, SideToggle, Spinner } from '@/components/ui';
 import { useTon } from '@/lib/hooks/useTon';
 import { useFunding } from '@/lib/hooks/useFunding';
 import { useFunding as useFundingControls } from './funding-context';
+import { useWallet } from '@/lib/contexts/wallet-context';
 import { depositableAmount } from '@/lib/deposit/deposit';
+import { buildHostedCheckoutUrl, openExternal } from '@/lib/funding/halliday';
 import { truncTo } from '@/lib/format';
 import { FUNDING_OPTION_KEYS, FUNDING_TARGETS, type FundingTargetKey } from '@/lib/config/chains';
 
@@ -27,6 +29,7 @@ export function DepositSheet({ open, onClose, target: initialTarget }: { open: b
   const { connected, proofState } = useTon();
   const funding = useFunding();
   const { markDeposited } = useFundingControls();
+  const { evmAddress } = useWallet();
   const [target, setTarget] = useState<FundingTargetKey>(initialTarget);
   const [amount, setAmount] = useState('');
 
@@ -47,8 +50,31 @@ export function DepositSheet({ open, onClose, target: initialTarget }: { open: b
     if (funding.phase === 'done') markDeposited(FUNDING_TARGETS[target].product);
   }, [funding.phase, target, markDeposited]);
 
-  const inFlight = funding.phase === 'signing' || funding.phase === 'bridging' || funding.phase === 'depositing';
+  const inFlight =
+    funding.phase === 'signing' ||
+    funding.phase === 'bridging' ||
+    funding.phase === 'awaiting_funds' ||
+    funding.phase === 'depositing';
   const hasQuote = funding.phase === 'quoted';
+
+  // "Buy with card" (Halliday) — tokenized/Ethereum only (card → USDC on Ethereum).
+  // Expected primary path is the external-browser fallback: Telegram's WebView
+  // blocks Halliday's hosted KYC iframe/popups (same reason the Privy useFundWallet
+  // path is dead here), so we open the Compass-hosted /onramp/checkout in the system
+  // browser via openLink, snapshot the wallet balance, and let useFunding's arrival
+  // poll auto-deposit once the USDC lands. See
+  // docs/plans/2026-06-23-halliday-onramp-integration/04-telegram-miniapp-buy-with-card.md.
+  const { startCardFunding } = funding;
+  const cardFundingEnabled = Boolean(FUNDING_TARGETS[target].cardFundingEnabled);
+  const showCardFunding = cardFundingEnabled && !inFlight && funding.phase !== 'done';
+  const onBuyWithCard = useCallback(async () => {
+    if (!evmAddress) return;
+    // Snapshot the pre-purchase balance + start the arrival poll, THEN launch the
+    // browser. (Ordering: arm the poll before the user leaves so funds aren't missed.)
+    const started = await startCardFunding(target);
+    if (!started) return;
+    openExternal(buildHostedCheckoutUrl({ address: evmAddress }));
+  }, [evmAddress, target, startCardFunding]);
 
   const changeTarget = useCallback(
     (k: FundingTargetKey) => {
@@ -74,7 +100,7 @@ export function DepositSheet({ open, onClose, target: initialTarget }: { open: b
 
   return (
     <Sheet open={open} onClose={onClose} accent="var(--border-neon)" dismissible={!inFlight}>
-      <SheetHeader eyebrow="// DEPOSIT" title={`Fund ${preset.label}`} subtitle="From your TON wallet" onClose={onClose} />
+      <SheetHeader eyebrow="// DEPOSIT" title={`Fund ${preset.label}`} subtitle={cardFundingEnabled ? 'Buy with a card or bridge from TON' : 'From your TON wallet'} onClose={onClose} />
       <div className="cp-hide-scroll" style={{ padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '70vh' }}>
         {funding.phase === 'done' ? (
           <Done label={preset.label} onClose={onClose} />
@@ -98,7 +124,52 @@ export function DepositSheet({ open, onClose, target: initialTarget }: { open: b
               </div>
             )}
 
-            <div className="cp-eyebrow" style={{ marginTop: 2 }}>Or bridge from TON</div>
+            {/* Buy with card (Halliday fiat on-ramp) — tokenized/Ethereum only. */}
+            {showCardFunding && (
+              <Button
+                variant="primary"
+                size="lg"
+                full
+                icon={<CreditCard size={16} />}
+                disabled={!evmAddress}
+                onClick={onBuyWithCard}
+              >
+                {evmAddress ? 'Buy with card' : 'Preparing wallet…'}
+              </Button>
+            )}
+
+            {/* In-flight panel — shared by the card on-ramp and the TON bridge so it
+                renders whether or not a TON wallet is connected. */}
+            {inFlight && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: 18, background: 'var(--surface)', border: '1px solid var(--border)', clipPath: 'var(--clip-notch)' }}>
+                <Spinner size={24} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                  {funding.phase === 'signing'
+                    ? 'Confirm in your TON wallet…'
+                    : funding.phase === 'depositing'
+                      ? `Depositing into ${preset.label}…`
+                      : funding.phase === 'awaiting_funds'
+                        ? 'Waiting for your card purchase…'
+                        : 'Bridging — waiting for funds…'}
+                </p>
+                {funding.phase === 'awaiting_funds' && (
+                  <p style={{ fontSize: 12, color: 'var(--text-mute)', textAlign: 'center', lineHeight: 1.5 }}>
+                    Complete your card purchase in the browser, then return here — we’ll deposit your USDC automatically once it arrives.
+                  </p>
+                )}
+                {funding.phase === 'bridging' && (
+                  <p style={{ fontSize: 12, color: 'var(--text-mute)', textAlign: 'center', lineHeight: 1.5 }}>
+                    This usually takes a few minutes. We’ll deposit automatically once it lands.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* The TON-bridge funding section is hidden while any funding leg is
+                in-flight (card or bridge) — the shared panel above shows progress. */}
+            {!inFlight && (
+              <>
+            <div className="cp-eyebrow" style={{ marginTop: 2 }}>{cardFundingEnabled ? 'Or bridge from TON' : 'Bridge from TON'}</div>
 
             <AmountField
               value={amount}
@@ -142,16 +213,8 @@ export function DepositSheet({ open, onClose, target: initialTarget }: { open: b
                     <Button variant="ghost" size="sm" full onClick={funding.reset}>Change amount</Button>
                   </div>
                 )}
-
-                {inFlight && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: 18, background: 'var(--surface)', border: '1px solid var(--border)', clipPath: 'var(--clip-notch)' }}>
-                    <Spinner size={24} />
-                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                      {funding.phase === 'signing' ? 'Confirm in your TON wallet…' : funding.phase === 'depositing' ? `Depositing into ${preset.label}…` : 'Bridging — waiting for funds…'}
-                    </p>
-                    {funding.phase === 'bridging' && <p style={{ fontSize: 12, color: 'var(--text-mute)', textAlign: 'center', lineHeight: 1.5 }}>This usually takes a few minutes. We’ll deposit automatically once it lands.</p>}
-                  </div>
-                )}
+              </>
+            )}
               </>
             )}
 

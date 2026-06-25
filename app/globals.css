@@ -1,0 +1,249 @@
+/* ════════════════════════════════════════════════════════════════════════
+   COMPASS · NEON TERMINAL — app global styles
+   Cyberpunk / HUD-terminal design system for the Telegram mini-app.
+   Tokens copied verbatim from .context/design/tokens/*.css (the design kit).
+   Reference the semantic aliases (--surface, --primary, --pos, --clip-notch …)
+   in components, never the raw ramps.
+   ════════════════════════════════════════════════════════════════════════ */
+/* Fonts are self-hosted via next/font (app/layout.tsx) — exposed as
+   --font-chakra / --font-jbmono — so no external @import (CSP-safe in Telegram). */
+@import 'tailwindcss';
+
+:root {
+  /* ── Void / surface ramp (cool, blue-black) ───────────────── */
+  --cp-void:        #04060b;
+  --cp-bg:          #070a13;
+  --cp-surface:     #0b1020;
+  --cp-surface-2:   #10162a;
+  --cp-surface-3:   #161f38;
+  --cp-grid:        rgba(94, 234, 255, 0.05);
+
+  /* ── Neon accents ─────────────────────────────────────────── */
+  --cp-cyan:        #00eaff;
+  --cp-cyan-dim:    #00b4c8;
+  --cp-magenta:     #ff2bd6;
+  --cp-magenta-dim: #c81fa8;
+  --cp-lime:        #c6ff2e;
+  --cp-amber:       #ffb31f;
+  --cp-green:       #00ff95;
+  --cp-red:         #ff2e57;
+
+  /* ── Neon glow tints (transparent, for fills + halos) ─────── */
+  --cp-cyan-100:    rgba(0, 234, 255, 0.10);
+  --cp-cyan-200:    rgba(0, 234, 255, 0.18);
+  --cp-cyan-400:    rgba(0, 234, 255, 0.40);
+  --cp-magenta-100: rgba(255, 43, 214, 0.10);
+  --cp-magenta-200: rgba(255, 43, 214, 0.20);
+  --cp-green-100:   rgba(0, 255, 149, 0.12);
+  --cp-green-200:   rgba(0, 255, 149, 0.22);
+  --cp-red-100:     rgba(255, 46, 87, 0.12);
+  --cp-red-200:     rgba(255, 46, 87, 0.22);
+
+  /* ── Text ─────────────────────────────────────────────────── */
+  --cp-text:        #e6f5ff;
+  --cp-text-2:      #8da2c4;
+  --cp-text-3:      #51648a;
+  --cp-text-on:     #03060d;
+
+  /* ── Lines ────────────────────────────────────────────────── */
+  --cp-line:        rgba(120, 190, 255, 0.12);
+  --cp-line-2:      rgba(120, 190, 255, 0.22);
+  --cp-line-neon:   rgba(0, 234, 255, 0.45);
+
+  /* ════ SEMANTIC ALIASES ═══════════════════════════════════ */
+  --bg:            var(--cp-bg);
+  --bg-void:       var(--cp-void);
+  --surface:       var(--cp-surface);
+  --surface-2:     var(--cp-surface-2);
+  --surface-3:     var(--cp-surface-3);
+
+  --text:          var(--cp-text);
+  --text-dim:      var(--cp-text-2);
+  --text-mute:     var(--cp-text-3);
+  --text-on:       var(--cp-text-on);
+
+  --border:        var(--cp-line);
+  --border-strong: var(--cp-line-2);
+  --border-neon:   var(--cp-line-neon);
+
+  --primary:       var(--cp-cyan);
+  --primary-dim:   var(--cp-cyan-dim);
+  --primary-soft:  var(--cp-cyan-200);
+  --accent:        var(--cp-magenta);
+  --accent-soft:   var(--cp-magenta-200);
+  --highlight:     var(--cp-lime);
+
+  --pos:           var(--cp-green);
+  --pos-soft:      var(--cp-green-200);
+  --neg:           var(--cp-red);
+  --neg-soft:      var(--cp-red-200);
+  --warn:          var(--cp-amber);
+
+  /* ── Typography (families backed by the next/font vars set on <html>) ──── */
+  --font-display: var(--font-chakra), "Chakra Petch", system-ui, sans-serif;
+  --font-body:    var(--font-chakra), "Chakra Petch", system-ui, sans-serif;
+  --font-mono:    var(--font-jbmono), "JetBrains Mono", ui-monospace, monospace;
+
+  --fs-micro:   10px;
+  --fs-caption: 11px;
+  --fs-label:   13px;
+  --fs-body:    15px;
+  --fs-title:   18px;
+  --fs-h3:      22px;
+  --fs-h2:      30px;
+  --fs-display: 46px;
+  --fs-mega:    60px;
+
+  --fw-reg:  400;
+  --fw-med:  500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+
+  --lh-tight:  1.02;
+  --lh-snug:   1.2;
+  --lh-normal: 1.5;
+
+  --ls-eyebrow: 0.22em;
+  --ls-caps:    0.12em;
+  --ls-tight:   -0.01em;
+  --ls-data:    0.02em;
+
+  /* ── Spacing / radii / sizing (4px grid) ──────────────────── */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+  --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+  --gutter: 16px;
+  --gap-row: 8px;
+  --gap-stack: 16px;
+  --pad-card: 16px;
+  --r-xs: 2px; --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-pill: 999px;
+  --notch: 10px;
+  --h-control: 48px;
+  --h-pill: 38px;
+  --hit-min: 44px;
+  --nav-h: 64px;
+  --app-w: 390px;
+
+  /* ── Effects: glow / depth / shaping / textures / motion ──── */
+  --glow-cyan-sm:  0 0 8px rgba(0, 234, 255, 0.45);
+  --glow-cyan-md:  0 0 18px rgba(0, 234, 255, 0.55), 0 0 4px rgba(0, 234, 255, 0.8);
+  --glow-cyan-lg:  0 0 32px rgba(0, 234, 255, 0.45), 0 0 10px rgba(0, 234, 255, 0.6);
+  --glow-magenta:  0 0 18px rgba(255, 43, 214, 0.55), 0 0 4px rgba(255, 43, 214, 0.8);
+  --glow-green:    0 0 16px rgba(0, 255, 149, 0.5);
+  --glow-red:      0 0 16px rgba(255, 46, 87, 0.5);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.8);
+  --edge-lit: inset 0 1px 0 rgba(120, 200, 255, 0.08);
+
+  --text-glow-cyan:    0 0 12px rgba(0, 234, 255, 0.6);
+  --text-glow-magenta: 0 0 12px rgba(255, 43, 214, 0.6);
+
+  --clip-notch: polygon(
+    0 0, calc(100% - var(--notch)) 0, 100% var(--notch),
+    100% 100%, var(--notch) 100%, 0 calc(100% - var(--notch))
+  );
+  --clip-tag: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+
+  --tex-scanlines: repeating-linear-gradient(
+    0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.16) 3px, rgba(0,0,0,0) 4px
+  );
+
+  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --t-fast: 120ms; --t-med: 220ms; --t-slow: 400ms;
+
+  /* ── Telegram safe-area insets (written at runtime by lib/telegram/init.ts;
+       env(safe-area-inset-*) is broken inside Telegram Mini Apps). KEEP NAMES. */
+  --tg-safe-area-inset-top: 0px;
+  --tg-safe-area-inset-bottom: 0px;
+  --tg-safe-area-inset-left: 0px;
+  --tg-safe-area-inset-right: 0px;
+  --tg-content-safe-area-inset-top: 0px;
+  --tg-content-safe-area-inset-bottom: 0px;
+  --tg-content-safe-area-inset-left: 0px;
+  --tg-content-safe-area-inset-right: 0px;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg-void);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* App shell: solid void background (no grid texture). */
+.cp-app {
+  position: relative;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+.cp-app *, .cp-app *::before, .cp-app *::after { box-sizing: border-box; }
+
+/* Top-level frame respecting Telegram safe areas. */
+.tg-app {
+  min-height: 100dvh;
+  padding-top: calc(var(--tg-safe-area-inset-top) + var(--tg-content-safe-area-inset-top));
+  padding-bottom: calc(var(--tg-safe-area-inset-bottom) + var(--tg-content-safe-area-inset-bottom));
+  padding-left: calc(var(--tg-safe-area-inset-left) + var(--tg-content-safe-area-inset-left));
+  padding-right: calc(var(--tg-safe-area-inset-right) + var(--tg-content-safe-area-inset-right));
+}
+
+/* Tabular, machine-precise numerals wherever data is shown. */
+.cp-mono, .cp-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-data);
+}
+
+/* HUD eyebrow — the recurring uppercase label voice. */
+.cp-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.cp-neon-cyan    { color: var(--primary); text-shadow: var(--text-glow-cyan); }
+.cp-neon-magenta { color: var(--accent);  text-shadow: var(--text-glow-magenta); }
+
+/* Scanline overlay — drop inside any positioned container. */
+.cp-scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--tex-scanlines);
+  background-size: 100% 4px;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+
+/* Hide scrollbar but keep scrolling. */
+.cp-hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.cp-hide-scroll::-webkit-scrollbar { display: none; }
+
+/* Focus ring — keyboard nav. */
+.cp-app button:focus-visible,
+.cp-app input:focus-visible,
+.cp-app a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@keyframes cp-pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes cp-sheet-up{ from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes cp-rise    { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes cp-spin    { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; }
+}

@@ -10,12 +10,17 @@ import type { BridgeQuoteResponse } from '@/lib/bridge/types';
 
 /**
  * "Add funds" = TWO legs:
- *   1. bridge TON → USDC in the embedded EVM wallet (Symbiosis), and
+ *   1. fund USDC into the embedded EVM wallet — via the Symbiosis TON bridge, OR
+ *      via Halliday "Buy with card" (fiat → USDC on Ethereum) — and
  *   2. deposit that USDC into the product account (Hyperliquid bridge / tokenized Safe).
  *
- * Phases: idle → quoting → quoted → signing → bridging (poll for arrival) →
- *         depositing → done | error. A pre-existing wallet balance can be
- *         deposited directly via depositExisting() (skips the bridge).
+ * Phases: idle → quoting → quoted → signing → bridging | awaiting_funds (poll for
+ *         arrival) → depositing → done | error. A pre-existing wallet balance can be
+ *         deposited directly via depositExisting() (skips the funding leg).
+ *
+ * `bridging` (TON bridge) and `awaiting_funds` (card on-ramp) share the SAME
+ * arrival semantics — "watch wallet USDC, auto-deposit on arrival" — and reuse the
+ * single poll effect below. Only the funding leg differs (TON sign vs. card).
  */
 export type FundingPhase =
   | 'idle'
@@ -23,6 +28,7 @@ export type FundingPhase =
   | 'quoted'
   | 'signing'
   | 'bridging'
+  | 'awaiting_funds'
   | 'depositing'
   | 'done'
   | 'error';
@@ -107,9 +113,10 @@ export function useFunding() {
   );
   doDepositRef.current = doDeposit;
 
-  // Poll for bridged funds while in 'bridging'; auto-deposit once they arrive.
+  // Poll for incoming funds while awaiting arrival (TON bridge OR card on-ramp);
+  // auto-deposit once they land. Both funding legs share this exact machinery.
   useEffect(() => {
-    if (phase !== 'bridging' || !activeTarget || !evmAddress) return;
+    if ((phase !== 'bridging' && phase !== 'awaiting_funds') || !activeTarget || !evmAddress) return;
     const target = FUNDING_TARGETS[activeTarget];
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -239,6 +246,38 @@ export function useFunding() {
     [refreshBalance, doDeposit],
   );
 
+  /**
+   * Start the "Buy with card" (Halliday) funding leg: snapshot the wallet's
+   * pre-purchase USDC balance, then enter `awaiting_funds` so the existing poll
+   * effect watches for the card-delivered USDC and auto-deposits it on arrival —
+   * identical machinery to the TON bridge, only the funding leg differs.
+   *
+   * Returns `true` once the poll has started, `false` if it could not (no embedded
+   * wallet yet). Resolving the snapshot before flipping the phase ensures the first
+   * poll tick compares against the true pre-balance, not 0.
+   */
+  const startCardFunding = useCallback(
+    async (targetKey: FundingTargetKey): Promise<boolean> => {
+      setError(null);
+      setActiveTarget(targetKey);
+      if (!evmAddress) {
+        setError('Embedded wallet not ready yet.');
+        setPhase('error');
+        return false;
+      }
+      depositingRef.current = false;
+      // Snapshot the current balance so the poll detects only the NEW card funds.
+      preBalanceRef.current = await getWalletUsdc(
+        evmAddress,
+        FUNDING_TARGETS[targetKey].chainName,
+      );
+      setWalletUsdc(preBalanceRef.current);
+      setPhase('awaiting_funds');
+      return true;
+    },
+    [evmAddress],
+  );
+
   return {
     phase,
     activeTarget,
@@ -249,6 +288,7 @@ export function useFunding() {
     getQuote,
     confirm,
     depositExisting,
+    startCardFunding,
     refreshBalance,
     reset,
   };

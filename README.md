@@ -41,6 +41,11 @@ All signing flows through a `WalletAdapter` backed by the Privy embedded wallet
 (`lib/hooks/usePrivyWalletAdapter.ts`). Withdraw bridges back to TON (`lib/hooks/useWithdraw.ts` +
 `app/api/bridge/withdraw-quote`).
 
+**Buy tokenized assets with a card** (Halliday fiat on-ramp, tokenized/Ethereum only): the Telegram
+WebView blocks third-party KYC iframes, so "Buy with card" opens the Compass-hosted `/onramp/checkout`
+in the system browser (`openLink`), then `useFunding`'s arrival-poll auto-deposits the delivered USDC
+(`lib/funding/halliday.ts`, `components/funding/DepositSheet.tsx`).
+
 ## Architecture map
 
 | Layer | Files |

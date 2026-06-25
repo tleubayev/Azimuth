@@ -20,6 +20,8 @@ import {
   miniApp,
   themeParams,
   viewport,
+  openLink as tmaOpenLink,
+  openTelegramLink as tmaOpenTelegramLink,
 } from '@telegram-apps/sdk-react';
 
 export interface TelegramEnv {
@@ -173,4 +175,50 @@ export function getRawInitData(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Open an external (non-Telegram) URL in the system browser. Inside Telegram this
+ * uses the SDK's `openLink` (the WebView blocks third-party redirects/popups, so
+ * the Halliday card+KYC checkout must escape to the system browser); outside
+ * Telegram (local `npm run dev` in a plain browser) it falls back to `window.open`.
+ *
+ * Feature-detected + try/catch in the same defensive style as the rest of the file,
+ * so it never throws regardless of the SDK minor-version surface.
+ */
+export function openLink(url: string): void {
+  if (inTelegram()) {
+    // `tmaOpenLink` is a function with an `.isAvailable()` guard in v3; tryCall
+    // swallows both the missing-method and not-supported cases.
+    if (tryCall(tmaOpenLink, 'isAvailable') !== false) {
+      try {
+        tmaOpenLink(url);
+        return;
+      } catch {
+        /* fall through to window.open */
+      }
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+/**
+ * Open a `t.me` / Telegram-internal deep link (e.g. a `returnTo` back into the
+ * mini-app). Uses the SDK's `openTelegramLink` in Telegram; degrades to a plain
+ * `openLink` / `window.open` elsewhere.
+ */
+export function openTelegramLink(url: string): void {
+  if (inTelegram()) {
+    if (tryCall(tmaOpenTelegramLink, 'isAvailable') !== false) {
+      try {
+        tmaOpenTelegramLink(url);
+        return;
+      } catch {
+        /* fall through */
+      }
+    }
+  }
+  openLink(url);
 }

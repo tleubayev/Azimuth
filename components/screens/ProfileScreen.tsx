@@ -1,6 +1,6 @@
 'use client';
 
-import { Wallet, LifeBuoy } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { Avatar, StatTile, SettingRow } from '@/components/ui';
 import { useWallet } from '@/lib/contexts/wallet-context';
 import { useTelegram } from '@/lib/providers/telegram-provider';
@@ -8,8 +8,6 @@ import { useTon } from '@/lib/hooks/useTon';
 import { usePerpsPositions } from '@/lib/hooks/perps/queries';
 import { useTokenizedPositions, pnlIsDisplayable } from '@/lib/hooks/tokenized/queries';
 import { fmtSignedUsd, shortAddr } from '@/lib/format';
-
-const SUPPORT_URL = 'https://discord.com/invite/ujetyJJPYr';
 
 export function ProfileScreen() {
   const { user } = useTelegram();
@@ -59,7 +57,6 @@ export function ProfileScreen() {
             iconTone="cyan"
             onClick={() => (connected ? disconnect() : connect())}
           />
-          <SettingRow icon={<LifeBuoy size={18} />} label="Support" iconTone="magenta" onClick={() => window.open(SUPPORT_URL, '_blank', 'noopener,noreferrer')} />
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 10.5, lineHeight: 1.8, color: 'var(--text-mute)', letterSpacing: '0.06em' }}>

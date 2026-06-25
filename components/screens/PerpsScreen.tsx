@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Settings, Activity, Plus, Minus, Zap, Lock, Check } from 'lucide-react';
+import { Settings, Activity, Plus, Minus, Zap, Lock, Check, Search } from 'lucide-react';
 import {
   Hero, AccountValue, SectionHead, Pill, StatusDot, MarketRow, IconButton, Button, BusyView, Spinner,
 } from '@/components/ui';
 import { CandleChart } from '@/components/trade/CandleChart';
 import { PerpsTradeSheet, type PerpsSelection } from '@/components/trade/PerpsTradeSheet';
+import { PerpsMarketsSheet } from '@/components/trade/PerpsMarketsSheet';
 import { PerpsActivitySheet } from '@/components/trade/PerpsActivitySheet';
 import { AccountMenu, type AccountAddressRow } from '@/components/trade/AccountMenu';
 import { usePerpsMarkets, usePerpsPositions } from '@/lib/hooks/perps/queries';
@@ -34,6 +35,11 @@ export function PerpsScreen() {
   const [selection, setSelection] = useState<PerpsSelection | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [marketsOpen, setMarketsOpen] = useState(false);
+
+  // Open the full searchable market browser → pick one → open the trade sheet.
+  const exploreMarkets = () => setMarketsOpen(true);
+  const selectFromExplore = (m: PerpsMarket) => { setMarketsOpen(false); setSelection({ market: m }); };
 
   const marketByAsset = useMemo(() => {
     const m = new Map<string, PerpsMarket>();
@@ -150,7 +156,7 @@ export function PerpsScreen() {
               </div>
             )}
           </div>
-          <PreviewMarkets markets={markets} loading={marketsLoading} onSelect={setSelection} />
+          <PreviewMarkets markets={markets} loading={marketsLoading} onSelect={setSelection} onExplore={exploreMarkets} />
         </div>
 
         {/* Markets are browsable during setup, but trading is locked until the
@@ -161,6 +167,7 @@ export function PerpsScreen() {
           canTrade={false}
           onAddFunds={() => { setSelection(null); openDeposit('perps'); }}
         />
+        <PerpsMarketsSheet open={marketsOpen} onClose={() => setMarketsOpen(false)} markets={markets} onSelect={selectFromExplore} />
         <AccountMenu open={accountOpen} onClose={() => setAccountOpen(false)} title="Perps account" rows={perpsRows} />
         <PerpsActivitySheet open={activityOpen} onClose={() => setActivityOpen(false)} />
       </div>
@@ -194,7 +201,7 @@ export function PerpsScreen() {
 
       <div style={{ padding: '18px 16px 22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
-          <SectionHead title={hasPositions ? 'Your positions' : 'Markets'} />
+          <SectionHead title={hasPositions ? 'Your positions' : 'Markets'} action="Explore" onAction={exploreMarkets} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {positions.map((p) => {
               const mk = marketByAsset.get(p.asset);
@@ -213,22 +220,31 @@ export function PerpsScreen() {
                 />
               );
             })}
-            {markets.slice(0, hasPositions ? 4 : 6).map((m) => (
-              <MarketRow
-                key={m.asset}
-                ticker={m.asset}
-                symbol={`${m.maxLeverage}×`}
-                sub={m.category.toUpperCase()}
-                price={fmtPrice(m.markPrice)}
-                changeLabel={m.volume24h != null ? `Vol ${fmtCompact(m.volume24h)}` : undefined}
-                onClick={() => setSelection({ market: m })}
-              />
-            ))}
+            {/* Drop markets the user already holds — they're shown above as
+                positions, so including them here would duplicate the row (and
+                collide React keys with the positions map). */}
+            {markets
+              .filter((m) => !positions.some((p) => p.asset === m.asset))
+              .slice(0, hasPositions ? 4 : 6)
+              .map((m) => (
+                <MarketRow
+                  key={m.asset}
+                  ticker={m.asset}
+                  symbol={`${m.maxLeverage}×`}
+                  sub={m.category.toUpperCase()}
+                  price={fmtPrice(m.markPrice)}
+                  changeLabel={m.volume24h != null ? `Vol ${fmtCompact(m.volume24h)}` : undefined}
+                  onClick={() => setSelection({ market: m })}
+                />
+              ))}
           </div>
         </div>
+
+        <Button variant="primary" size="lg" full icon={<Search size={16} />} onClick={exploreMarkets}>Explore markets</Button>
       </div>
 
       <PerpsTradeSheet selection={selection} onClose={() => setSelection(null)} />
+      <PerpsMarketsSheet open={marketsOpen} onClose={() => setMarketsOpen(false)} markets={markets} onSelect={selectFromExplore} />
       <PerpsActivitySheet open={activityOpen} onClose={() => setActivityOpen(false)} />
       <AccountMenu open={accountOpen} onClose={() => setAccountOpen(false)} title="Perps account" rows={perpsRows} />
     </div>
@@ -276,14 +292,17 @@ function PreviewMarkets({
   markets,
   loading,
   onSelect,
+  onExplore,
 }: {
   markets: PerpsMarket[];
   loading: boolean;
   onSelect: (sel: PerpsSelection) => void;
+  onExplore: () => void;
 }) {
+  const hasMarkets = markets.length > 0;
   return (
     <div>
-      <SectionHead title="Markets" />
+      <SectionHead title="Markets" action={hasMarkets ? 'Explore' : undefined} onAction={hasMarkets ? onExplore : undefined} />
       {loading && markets.length === 0 ? (
         <CandleChart candles={[]} loading height={120} />
       ) : (
@@ -299,6 +318,11 @@ function PreviewMarkets({
               onClick={() => onSelect({ market: m })}
             />
           ))}
+          {hasMarkets && (
+            <Button variant="secondary" size="md" full icon={<Search size={15} />} onClick={onExplore} style={{ marginTop: 4 }}>
+              Explore all markets
+            </Button>
+          )}
         </div>
       )}
     </div>

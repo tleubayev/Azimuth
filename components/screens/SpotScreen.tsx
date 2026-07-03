@@ -17,8 +17,8 @@ import { useCreateTokenizedAccount } from '@/lib/hooks/tokenized/useTokenizedTra
 import { useRefreshTokenized } from '@/lib/hooks/tokenized/useRefreshTokenized';
 import { useFunding } from '@/components/funding/funding-context';
 import { useWallet } from '@/lib/contexts/wallet-context';
-import { fmtUsdParts, fmtPrice, fmtApy, fmtSignedUsd, truncTo, shortAddr } from '@/lib/format';
-import { assetClassLabel, type TokenizedMarket } from '@/lib/compass/types';
+import { fmtUsdParts, fmtPrice, fmtSignedUsd, truncTo, shortAddr } from '@/lib/format';
+import { type TokenizedMarket } from '@/lib/compass/types';
 
 export function SpotScreen() {
   const { evmAddress } = useWallet();
@@ -48,10 +48,20 @@ export function SpotScreen() {
     return m;
   }, [positions]);
 
+  // Equity markets ranked by 24h move — top gainers / losers for the no-positions view.
+  const { topGainers, topLosers } = useMemo(() => {
+    const ranked = markets
+      .filter((m) => m.provider !== 'midas' && m.change24hPct != null)
+      .sort((a, b) => (b.change24hPct ?? 0) - (a.change24hPct ?? 0));
+    return {
+      topGainers: ranked.filter((m) => (m.change24hPct ?? 0) > 0).slice(0, 4),
+      topLosers: ranked.filter((m) => (m.change24hPct ?? 0) < 0).slice(-4).reverse(),
+    };
+  }, [markets]);
+
   const hasPositions = positions.length > 0;
   const accountValue = totalUsd + safeUsdc;
   const { whole, cents } = fmtUsdParts(accountValue);
-  const rwaMarkets = markets.filter((m) => m.provider === 'midas');
 
   const openDetail = (m: TokenizedMarket) => setDetailMarket(m);
 
@@ -130,44 +140,54 @@ export function SpotScreen() {
 
       <div style={{ padding: '18px 16px 22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         {equityMarketClosed && <MarketHoursBanner />}
-        <div>
-          <SectionHead title={hasPositions ? 'Your holdings' : 'Top markets'} action="Explore" onAction={() => setMarketsOpen(true)} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {hasPositions
-              ? positions.map((p) => {
-                  const mk = marketBySymbol.get(p.symbol);
-                  return (
-                    <MarketRow
-                      key={p.symbol}
-                      ticker={p.underlyingTicker || p.symbol}
-                      symbol={p.symbol}
-                      sub={`${p.balance} ${p.symbol}`}
-                      price={p.balanceUsd != null ? fmtPrice(p.balanceUsd) : fmtPrice(p.currentPriceUsd ?? 0)}
-                      change={pnlIsDisplayable(p.pnl) ? Number(p.pnl.totalPnl.toFixed(2)) : null}
-                      changeLabel={pnlIsDisplayable(p.pnl) ? fmtSignedUsd(p.pnl.totalPnl) : undefined}
-                      held
-                      onClick={mk ? () => openDetail(mk) : undefined}
-                    />
-                  );
-                })
-              : markets.filter((m) => m.provider !== 'midas').slice(0, 4).map((m) => (
-                  <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} onClick={() => openDetail(m)} />
-                ))}
-          </div>
-        </div>
-
-        {rwaMarkets.length > 0 && (
+        <Button variant="primary" size="lg" full icon={<Repeat size={16} />} disabled={marketsLoading && markets.length === 0} onClick={() => setMarketsOpen(true)}>Explore markets</Button>
+        {hasPositions ? (
           <div>
-            <SectionHead title="Discover · RWA" />
+            <SectionHead title="Your holdings" action="Explore" onAction={() => setMarketsOpen(true)} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {rwaMarkets.map((m) => (
-                <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={assetClassLabel(m.assetClass)} subColor="var(--accent)" price={fmtPrice(m.currentPriceUsd ?? 0)} changeLabel={fmtApy(m.apy7d)} onClick={() => openDetail(m)} />
-              ))}
+              {positions.map((p) => {
+                const mk = marketBySymbol.get(p.symbol);
+                return (
+                  <MarketRow
+                    key={p.symbol}
+                    ticker={p.underlyingTicker || p.symbol}
+                    symbol={p.symbol}
+                    sub={`${p.balance} ${p.symbol}`}
+                    price={p.balanceUsd != null ? fmtPrice(p.balanceUsd) : fmtPrice(p.currentPriceUsd ?? 0)}
+                    change={pnlIsDisplayable(p.pnl) ? Number(p.pnl.totalPnl.toFixed(2)) : null}
+                    changeLabel={pnlIsDisplayable(p.pnl) ? fmtSignedUsd(p.pnl.totalPnl) : undefined}
+                    held
+                    onClick={mk ? () => openDetail(mk) : undefined}
+                  />
+                );
+              })}
             </div>
           </div>
+        ) : (
+          <>
+            {topGainers.length > 0 && (
+              <div>
+                <SectionHead title="Top gainers" action="Explore" onAction={() => setMarketsOpen(true)} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {topGainers.map((m) => (
+                    <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} onClick={() => openDetail(m)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {topLosers.length > 0 && (
+              <div>
+                <SectionHead title="Top losers" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {topLosers.map((m) => (
+                    <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} onClick={() => openDetail(m)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        <Button variant="primary" size="lg" full icon={<Repeat size={16} />} disabled={marketsLoading && markets.length === 0} onClick={() => setMarketsOpen(true)}>Explore markets</Button>
       </div>
 
       <AssetDetailSheet market={detailMarket} position={detailMarket ? positionBySymbol.get(detailMarket.symbol) ?? null : null} onClose={() => setDetailMarket(null)} />

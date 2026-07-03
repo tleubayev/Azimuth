@@ -1,6 +1,6 @@
 # Azimuth
 
-A **Telegram Mini App** to trade **Compass tokenized assets** (Ondo equities + Midas RWA) and
+A **Telegram Mini App** to trade **Compass tokenized assets** (Ondo equities + Midas RWA)  and
 **Hyperliquid perps** from inside Telegram. The trading UI is **built from scratch** on the Compass
 API and styled with the cyberpunk **Compass · Neon Terminal** design system — 3-tab bottom nav
 (Spot · Perps · Profile). It does **not** embed the `@compass-labs/widgets` React components.

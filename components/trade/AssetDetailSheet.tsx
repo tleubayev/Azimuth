@@ -29,9 +29,18 @@ export function AssetDetailSheet({ market, position, onClose }: { market: Tokeni
   const swapTraded = isSwapTraded(market.assetClass);
   const isMidas = market.provider === 'midas';
   const hasBalance = !!position && parseFloat(position.balance) > 0;
-  // Equities (Ondo) can't be traded while the U.S. market is closed; Midas RWA
-  // (swap-traded) is unaffected. Charts/detail above stay visible regardless.
-  const tradingClosed = equityMarketClosed && !swapTraded;
+  // Prefer the market's own live tradability (`status`, freshest from the detail
+  // fetch) — it's per-market and covers halts/holidays the global session clock
+  // can't see. Fall back to the equity-market probe only when the API doesn't
+  // report a status (fail-open for swap-traded Midas RWA). Charts/detail above
+  // stay visible regardless.
+  const status = detail?.status ?? market.status;
+  const tradingClosed = status ? !status.isOpen : equityMarketClosed && !swapTraded;
+  const closedLead =
+    status?.state === 'PAUSED' ? 'Trading halted' : status?.state === 'LIMITED' ? 'Trading limited' : 'Market closed';
+  const closedMessage = status?.reason
+    ? `${closedLead} — ${status.reason}`
+    : 'Market closed — trading resumes at the next U.S. session';
 
   return (
     <Sheet open={open} onClose={onClose} dismissible={!busy}>
@@ -93,7 +102,7 @@ export function AssetDetailSheet({ market, position, onClose }: { market: Tokeni
           <div style={{ padding: 16, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tradingClosed && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--warn)' }}>
-                <Clock size={13} /> Market closed — trading resumes at the next U.S. session
+                <Clock size={13} /> {closedMessage}
               </div>
             )}
             <div style={{ display: 'flex', gap: 10 }}>

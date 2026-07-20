@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Sheet, SheetHeader, MarketRow } from '@/components/ui';
-import { assetClassLabel, type TokenizedMarket, type TokenizedAssetClass } from '@/lib/compass/types';
+import { assetClassLabel, marketTradable, tradingStateLabel, type TokenizedMarket, type TokenizedAssetClass } from '@/lib/compass/types';
 import { fmtPrice, fmtApy } from '@/lib/format';
 
 const CLASSES: (TokenizedAssetClass | 'ALL')[] = ['ALL', 'EQUITY', 'T_BILLS', 'BASIS_TRADE', 'BTC_YIELD'];
@@ -45,19 +45,24 @@ export function SpotMarketsSheet({ open, onClose, markets, onSelect }: { open: b
         </div>
       </div>
       <div className="cp-hide-scroll" style={{ padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '52vh' }}>
-        {filtered.map((m) => (
-          <MarketRow
-            key={`${m.symbol}-${m.chain}`}
-            ticker={m.underlyingTicker || m.symbol}
-            symbol={m.symbol}
-            sub={m.provider === 'midas' ? assetClassLabel(m.assetClass) : (m.sectors[0] ?? 'EQUITIES')}
-            subColor={m.provider === 'midas' ? 'var(--accent)' : 'var(--primary)'}
-            price={fmtPrice(m.currentPriceUsd ?? 0)}
-            change={m.provider === 'midas' ? null : (m.change24hPct ?? null)}
-            changeLabel={m.provider === 'midas' ? fmtApy(m.apy7d) : undefined}
-            onClick={() => onSelect(m)}
-          />
-        ))}
+        {filtered.map((m) => {
+          const unavailable = !marketTradable(m);
+          return (
+            <MarketRow
+              key={`${m.symbol}-${m.chain}`}
+              ticker={m.underlyingTicker || m.symbol}
+              symbol={m.symbol}
+              sub={m.provider === 'midas' ? assetClassLabel(m.assetClass) : (m.sectors[0] ?? 'EQUITIES')}
+              subColor={m.provider === 'midas' ? 'var(--accent)' : 'var(--primary)'}
+              price={fmtPrice(m.currentPriceUsd ?? 0)}
+              change={m.provider === 'midas' ? null : (m.change24hPct ?? null)}
+              changeLabel={m.provider === 'midas' ? fmtApy(m.apy7d) : undefined}
+              unavailable={unavailable}
+              statusLabel={unavailable && m.status ? tradingStateLabel(m.status.state) : undefined}
+              onClick={() => onSelect(m)}
+            />
+          );
+        })}
         {filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '24px 0', fontFamily: 'var(--font-mono)', fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-mute)' }}>No matches</div>
         )}

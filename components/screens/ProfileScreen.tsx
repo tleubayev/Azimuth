@@ -5,7 +5,6 @@ import { Avatar, StatTile, SettingRow } from '@/components/ui';
 import { useWallet } from '@/lib/contexts/wallet-context';
 import { useTelegram } from '@/lib/providers/telegram-provider';
 import { useTon } from '@/lib/hooks/useTon';
-import { usePerpsPositions } from '@/lib/hooks/perps/queries';
 import { useTokenizedPositions, pnlIsDisplayable } from '@/lib/hooks/tokenized/queries';
 import { fmtSignedUsd, shortAddr } from '@/lib/format';
 
@@ -13,16 +12,13 @@ export function ProfileScreen() {
   const { user } = useTelegram();
   const { evmAddress } = useWallet();
   const { tonAddress, connected, connect, disconnect } = useTon();
-  const perps = usePerpsPositions();
   const tok = useTokenizedPositions();
 
   const name = user?.firstName || user?.username || (evmAddress ? shortAddr(evmAddress) : 'Trader');
   const initial = (name[0] ?? 'C').toUpperCase();
   const caption = user?.username ? `@${user.username}` : evmAddress ? shortAddr(evmAddress, 6, 4) : 'COMPASS';
 
-  const perpsPnl = perps.positions.reduce((s, p) => s + p.unrealizedPnl, 0);
-  const tokPnl = pnlIsDisplayable(tok.accountPnl) ? tok.accountPnl.totalPnl : 0;
-  const totalPnl = perpsPnl + tokPnl;
+  const totalPnl = pnlIsDisplayable(tok.accountPnl) ? tok.accountPnl.totalPnl : 0;
 
   return (
     <div className="cp-hide-scroll" style={{ height: '100%', overflowY: 'auto' }}>
@@ -40,7 +36,7 @@ export function ProfileScreen() {
 
       <div style={{ padding: '18px 16px 22px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
-          <div className="cp-eyebrow" style={{ marginBottom: 10, paddingLeft: 2 }}>Spot + Perps · open P&L</div>
+          <div className="cp-eyebrow" style={{ marginBottom: 10, paddingLeft: 2 }}>Spot · open P&L</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
             <StatTile value={fmtSignedUsd(totalPnl)} label="P&L" tone={totalPnl >= 0 ? 'pos' : 'neg'} />
             <StatTile value="—" label="Win rate" tone="cyan" />

@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { CandlestickChart, TrendingUp, User } from 'lucide-react';
+import { CandlestickChart, User } from 'lucide-react';
 import { TgBar, TabBar, BusyView } from '@/components/ui';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { SpotScreen } from '@/components/screens/SpotScreen';
-import { PerpsScreen } from '@/components/screens/PerpsScreen';
 import { ProfileScreen } from '@/components/screens/ProfileScreen';
 import { useWallet } from '@/lib/contexts/wallet-context';
 
-type Tab = 'spot' | 'perps' | 'profile';
+type Tab = 'spot' | 'profile';
 
 export function AppShell() {
   const { authenticated, ready } = useWallet();
@@ -41,8 +40,6 @@ export function AppShell() {
           <OnboardingFlow />
         ) : tab === 'spot' ? (
           <SpotScreen />
-        ) : tab === 'perps' ? (
-          <PerpsScreen />
         ) : (
           <ProfileScreen />
         )}
@@ -54,7 +51,6 @@ export function AppShell() {
           onChange={(t) => setTab(t as Tab)}
           items={[
             { id: 'spot', label: 'Spot', icon: <CandlestickChart size={22} /> },
-            { id: 'perps', label: 'Perps', icon: <TrendingUp size={22} /> },
             { id: 'profile', label: 'Profile', icon: <User size={22} /> },
           ]}
         />

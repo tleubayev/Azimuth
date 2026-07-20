@@ -5,7 +5,7 @@ A **Telegram Mini App** to trade **Compass tokenized assets** (Ondo equities + M
 API and styled with the cyberpunk **Compass · Neon Terminal** design system — 3-tab bottom nav
 (Spot · Perps · Profile). It does **not** embed the `@compass-labs/widgets` React components.
 
-Telegram only exposes **TON wallets**, so the app:
+Telegram only exposes **TON wallets**, so the app: 
 
 1. logs the user in with **Privy** (seamless Telegram login) → an **embedded EVM wallet**,
 2. connects the user's **TON wallet** via **TON Connect** (for funding),

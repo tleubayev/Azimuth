@@ -23,7 +23,7 @@ Telegram only exposes **TON wallets**, so the app:
 > Design & rationale: `docs/plans/2026-06-15-telegram-ton-miniapp/`
 > Research: `.context/ton-miniapp-research/`
 
-## How it works
+## How it works 
 
 ```
 Telegram WebView

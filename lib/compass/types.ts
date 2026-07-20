@@ -87,6 +87,23 @@ export interface PerpsPrepare {
 export type TokenizedAssetClass = 'EQUITY' | 'T_BILLS' | 'BASIS_TRADE' | 'BTC_YIELD';
 export type TokenizedProvider = 'ondo' | 'midas';
 
+/** Coarse tradability state for a tokenized market (API `status.state`). */
+export type TradingState = 'OPEN' | 'CLOSED' | 'PAUSED' | 'LIMITED';
+
+/**
+ * Live tradability of a tokenized market — the API `status` field. `isOpen` is
+ * the authoritative "can be traded right now" boolean; `state` explains why when
+ * closed (CLOSED = outside hours, PAUSED = halted, LIMITED = restricted).
+ * Equities follow US market sessions; RWA / vault assets are generally always
+ * open and may omit this — a null status is treated as tradable (fail-open).
+ */
+export interface TokenizedTradingStatus {
+  isOpen: boolean;
+  state: TradingState;
+  reason: string | null;
+  nextOpen: string | null;
+}
+
 export interface TokenizedMarket {
   symbol: string;
   underlyingTicker: string;
@@ -102,6 +119,8 @@ export interface TokenizedMarket {
   chain: string;
   apy7d: number | null;
   tvlUsd: number | null;
+  /** Live tradability; null when the API doesn't report it (treat as open). */
+  status: TokenizedTradingStatus | null;
 }
 
 export interface TokenizedPnl {
@@ -183,6 +202,28 @@ export const PERIOD_PARAMS: Record<TokenizedPeriod, { interval: string; range: s
 /** RWA yield tokens trade via swaps; equities use the Fusion order flow. */
 export function isSwapTraded(assetClass: TokenizedAssetClass): boolean {
   return assetClass !== 'EQUITY';
+}
+
+/**
+ * Can this market be traded right now? A market with no reported status is
+ * treated as tradable (fail-open), matching the app's closed-market backstops.
+ */
+export function marketTradable(m: { status?: TokenizedTradingStatus | null }): boolean {
+  return m.status ? m.status.isOpen : true;
+}
+
+/** Short label for a not-open market, e.g. 'Closed' / 'Halted' / 'Limited'. */
+export function tradingStateLabel(state: TradingState): string {
+  switch (state) {
+    case 'OPEN':
+      return 'Open';
+    case 'CLOSED':
+      return 'Closed';
+    case 'PAUSED':
+      return 'Halted';
+    case 'LIMITED':
+      return 'Limited';
+  }
 }
 
 export function assetClassLabel(assetClass: TokenizedAssetClass): string {

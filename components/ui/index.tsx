@@ -286,11 +286,15 @@ export interface MarketRowProps {
   change?: number | null;
   changeLabel?: ReactNode;
   held?: boolean;
+  /** Greyed-out, not tradable right now (e.g. market closed / halted). */
+  unavailable?: boolean;
+  /** Small chip beside the ticker when unavailable (e.g. 'Closed'). */
+  statusLabel?: ReactNode;
   onClick?: () => void;
   style?: CSSProperties;
 }
 
-export function MarketRow({ ticker, symbol, sub, subColor = 'var(--primary)', price, change = null, changeLabel = null, held = false, onClick, style }: MarketRowProps) {
+export function MarketRow({ ticker, symbol, sub, subColor = 'var(--primary)', price, change = null, changeLabel = null, held = false, unavailable = false, statusLabel = null, onClick, style }: MarketRowProps) {
   const up = (change ?? 0) >= 0;
   // A bare changeLabel (APY / volume) stays neutral; only a numeric `change` colors.
   const changeColor = change == null ? 'var(--text-dim)' : up ? 'var(--pos)' : 'var(--neg)';
@@ -307,16 +311,23 @@ export function MarketRow({ ticker, symbol, sub, subColor = 'var(--primary)', pr
         boxShadow: held ? 'inset 2px 0 12px -6px var(--pos)' : 'var(--edge-lit)',
         clipPath: 'var(--clip-notch)', cursor: onClick ? 'pointer' : 'default', color: 'inherit',
         fontFamily: 'var(--font-display)', transition: 'background var(--t-fast), border-color var(--t-fast)',
+        // Greyed out when not tradable — desaturate + dim so it clearly reads as
+        // unavailable, while staying tappable to view the chart/details.
+        opacity: unavailable ? 0.5 : 1,
+        filter: unavailable ? 'grayscale(1)' : undefined,
         ...style,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-3)'; e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      onMouseEnter={unavailable ? undefined : (e) => { e.currentTarget.style.background = 'var(--surface-3)'; e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+      onMouseLeave={unavailable ? undefined : (e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
     >
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, whiteSpace: 'nowrap' }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>{ticker}</span>
           {symbol != null && (
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 600, color: 'var(--text-mute)' }}>{symbol}</span>
+          )}
+          {statusLabel != null && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--warn)', border: '1px solid var(--warn)', borderRadius: 2, padding: '1px 4px', lineHeight: 1 }}>{statusLabel}</span>
           )}
         </div>
         <div style={{ marginTop: 3, fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: 'var(--ls-caps)', textTransform: 'uppercase', color: held ? 'var(--text-dim)' : subColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

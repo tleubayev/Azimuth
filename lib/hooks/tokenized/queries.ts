@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@/lib/contexts/wallet-context';
 import { compassGet, compassPost, CompassError, pickNum, pickStr, pickBool } from '@/lib/compass/client';
 import { equityStatusFromProbeError, type EquityMarketStatus } from '@/lib/tokenized/marketStatus';
+import { parseTradingStatus } from '@/lib/tokenized/tradingStatus';
 import {
   PERIOD_PARAMS,
   type TokenizedMarket,
@@ -46,6 +47,7 @@ function normMarket(r: Loose): TokenizedMarket {
     chain: pickStr(r, 'chain') ?? TOKENIZED_CHAIN,
     apy7d: pickNum(r, 'apy_7d', 'apy7d'),
     tvlUsd: pickNum(r, 'tvl_usd', 'tvlUsd'),
+    status: parseTradingStatus(r.status),
   };
 }
 

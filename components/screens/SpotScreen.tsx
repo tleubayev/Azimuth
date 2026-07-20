@@ -18,7 +18,7 @@ import { useRefreshTokenized } from '@/lib/hooks/tokenized/useRefreshTokenized';
 import { useFunding } from '@/components/funding/funding-context';
 import { useWallet } from '@/lib/contexts/wallet-context';
 import { fmtUsdParts, fmtPrice, fmtSignedUsd, truncTo, shortAddr } from '@/lib/format';
-import { type TokenizedMarket } from '@/lib/compass/types';
+import { marketTradable, tradingStateLabel, type TokenizedMarket } from '@/lib/compass/types';
 
 export function SpotScreen() {
   const { evmAddress } = useWallet();
@@ -147,6 +147,7 @@ export function SpotScreen() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {positions.map((p) => {
                 const mk = marketBySymbol.get(p.symbol);
+                const unavailable = mk ? !marketTradable(mk) : false;
                 return (
                   <MarketRow
                     key={p.symbol}
@@ -157,6 +158,8 @@ export function SpotScreen() {
                     change={pnlIsDisplayable(p.pnl) ? Number(p.pnl.totalPnl.toFixed(2)) : null}
                     changeLabel={pnlIsDisplayable(p.pnl) ? fmtSignedUsd(p.pnl.totalPnl) : undefined}
                     held
+                    unavailable={unavailable}
+                    statusLabel={unavailable && mk?.status ? tradingStateLabel(mk.status.state) : undefined}
                     onClick={mk ? () => openDetail(mk) : undefined}
                   />
                 );
@@ -170,7 +173,7 @@ export function SpotScreen() {
                 <SectionHead title="Top gainers" action="Explore" onAction={() => setMarketsOpen(true)} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {topGainers.map((m) => (
-                    <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} onClick={() => openDetail(m)} />
+                    <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} unavailable={!marketTradable(m)} statusLabel={!marketTradable(m) && m.status ? tradingStateLabel(m.status.state) : undefined} onClick={() => openDetail(m)} />
                   ))}
                 </div>
               </div>
@@ -180,7 +183,7 @@ export function SpotScreen() {
                 <SectionHead title="Top losers" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {topLosers.map((m) => (
-                    <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} onClick={() => openDetail(m)} />
+                    <MarketRow key={m.symbol} ticker={m.underlyingTicker || m.symbol} symbol={m.symbol} sub={m.sectors[0] ?? 'EQUITIES'} price={fmtPrice(m.currentPriceUsd ?? 0)} change={m.change24hPct ?? null} unavailable={!marketTradable(m)} statusLabel={!marketTradable(m) && m.status ? tradingStateLabel(m.status.state) : undefined} onClick={() => openDetail(m)} />
                   ))}
                 </div>
               </div>

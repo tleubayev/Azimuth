@@ -165,17 +165,33 @@ export async function sendTransactionServer(address: string, tx: ServerTxRequest
     params: { transaction },
     authorization_context: { authorization_private_keys: [authorizationKey()] },
   } as unknown as Parameters<typeof eth.sendTransaction>[1]);
-  const { hash, sponsored } = res as { hash?: string; sponsored?: boolean };
-  if (!hash) throw new Error('Privy did not return a transaction hash.');
+  // Sponsored smart-account sends return before inclusion. In that case Privy
+  // intentionally leaves `hash` empty and returns a user-operation hash plus a
+  // transaction id. Treat that as a successful submission instead of reporting
+  // a false 502 to the client.
+  const { hash, sponsored, user_operation_hash: userOperationHash, transaction_id: transactionId } = res as {
+    hash?: string;
+    sponsored?: boolean;
+    user_operation_hash?: string;
+    transaction_id?: string;
+  };
+  const submissionHash = hash || userOperationHash;
+  if (!submissionHash) throw new Error('Privy did not return a transaction or user-operation hash.');
   // Surface whether sponsorship actually applied — an unsponsored tx will never
   // mine, so this distinguishes a real send from a phantom one in the logs.
-  console.info('[privy/send-transaction] broadcast', { hash, sponsored, chainId: tx.chainId });
+  console.info('[privy/send-transaction] submitted', {
+    hash,
+    userOperationHash,
+    transactionId,
+    sponsored,
+    chainId: tx.chainId,
+  });
   if (sponsored === false) {
     throw new Error(
       'Transaction was not gas-sponsored (no Privy sponsorship policy for this chain); it would never be mined.',
     );
   }
-  return hash;
+  return submissionHash;
 }
 
 /** Whether server-side signing is configured (used to decide client routing). */

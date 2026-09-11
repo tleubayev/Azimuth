@@ -181,7 +181,15 @@ export function useWithdraw() {
         // a missing route or an unpayable native `value` can't strand funds in the
         // embedded wallet. (A quote doesn't require the funds to be present yet.)
         setPhase('quoting');
-        const preview = await requestWithdrawQuote(target, truncTo(amount, 2).toFixed(2));
+        // Include USDC already sitting in the embedded wallet. A previous
+        // interrupted withdrawal can leave funds there, and the normal product
+        // balance UI has no separate way to recover them. Quoting the combined
+        // amount lets the user withdraw the remaining product balance and bridge
+        // everything to their verified TON wallet in one route (and one fee).
+        const pre = await getWalletUsdc(evmAddress, chainName);
+        const requestedAmount = truncTo(amount, 2);
+        const previewAmount = truncTo(requestedAmount + pre, 2);
+        const preview = await requestWithdrawQuote(target, previewAmount.toFixed(2));
         if (cancelled.current) return;
         if (!preview.evmTransaction?.to) {
           setError(`Withdraw to TON isn’t available for ${preset.label} right now. Your funds are untouched.`);
@@ -196,7 +204,6 @@ export function useWithdraw() {
 
         // Leg 1: product → embedded wallet.
         setPhase('withdrawing');
-        const pre = await getWalletUsdc(evmAddress, chainName);
         if (target === 'perps') {
           await perps.withdraw(amount);
         } else {
@@ -214,7 +221,10 @@ export function useWithdraw() {
           setPhase('error');
           return;
         }
-        const bridgeAmount = Math.min(truncTo(amount, 2), delta);
+        // Bridge the full post-withdrawal wallet balance, including funds that
+        // were already stranded there before this attempt. The destination is
+        // still bound server-side to the session's verified TON wallet.
+        const bridgeAmount = truncTo(balance, 2);
         if (bridgeAmount <= 0) {
           setError('Withdrawn amount is too small to bridge.');
           setPhase('error');

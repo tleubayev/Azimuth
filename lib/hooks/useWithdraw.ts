@@ -320,7 +320,7 @@ export function useWithdraw() {
 
   /** Send all Ethereum USDC held by the embedded wallet to the user-confirmed
    * recovery address. This bypasses the product and TON bridge entirely. */
-  const recoverToEvm = useCallback(async () => {
+  const recoverToEvm = useCallback(async (safeBalance: number) => {
     cancelled.current = false;
     setError(null);
     setTxHash(null);
@@ -330,7 +330,23 @@ export function useWithdraw() {
       return;
     }
     try {
-      const balance = await getWalletUsdc(evmAddress, 'ethereum');
+      const pre = await getWalletUsdc(evmAddress, 'ethereum');
+      const safeAmount = truncTo(safeBalance, USDC_DECIMALS);
+      let balance = pre;
+
+      // The stranded balance normally sits in the Compass Safe, not the owner
+      // wallet. Pull it out first and wait for the on-chain arrival before
+      // building the one-way recovery transfer.
+      if (safeAmount > 0) {
+        setPhase('withdrawing');
+        await withdrawToWallet(safeAmount.toFixed(USDC_DECIMALS));
+        setPhase('waiting');
+        const arrival = await waitForArrival('ethereum', pre);
+        if (!arrival.arrived) {
+          throw new Error('Safe withdrawal is still confirming. Wait a moment, then try recovery again.');
+        }
+        balance = arrival.balance;
+      }
       const recoverable = truncTo(balance, USDC_DECIMALS);
       if (recoverable <= 0) throw new Error('No USDC is available in the embedded wallet.');
 
@@ -350,7 +366,7 @@ export function useWithdraw() {
       setError(e instanceof Error ? e.message : 'Recovery transfer failed.');
       setPhase('error');
     }
-  }, [evmAddress, adapter]);
+  }, [evmAddress, adapter, withdrawToWallet, waitForArrival]);
 
   return { phase, error, quote, txHash, start, recoverToEvm, reset };
 }
